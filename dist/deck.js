@@ -3,9 +3,17 @@
   const notes = JSON.parse(document.querySelector('#deck-notes-data').textContent);
   const select = document.querySelector('#deck-select');
   const previous = document.querySelector('#deck-prev'), next = document.querySelector('#deck-next');
+  const stage = document.querySelector('#deck-stage');
+  slides.forEach(slide => { slide.tabIndex = -1; });
   let current = 0;
+  let navigationFrame;
   function fitCanvas() {
-    const width = document.querySelector('#deck-stage').clientWidth;
+    if (window.matchMedia('(max-width:700px)').matches) { stage.style.width = ''; return; }
+    const toolbarHeight = document.querySelector('.deck-toolbar').getBoundingClientRect().height;
+    const controlsHeight = document.querySelector('.deck-controls').getBoundingClientRect().height;
+    const availableHeight = Math.max(180, window.innerHeight - toolbarHeight - controlsHeight - 44);
+    const width = Math.min(1920, window.innerWidth - 48, availableHeight * 1920 / 1080);
+    stage.style.width = `${width}px`;
     document.documentElement.style.setProperty('--deck-scale', String(width / 1920));
     document.documentElement.style.setProperty('--stage-height', `${width * 1080 / 1920}px`);
   }
@@ -16,8 +24,18 @@
     document.querySelector('#deck-progress').textContent = `${current+1} / ${slides.length}`;
     document.querySelector('#deck-note-body').textContent = notes[current];
     if (updateHash) history.replaceState(null, '', '#' + slides[current].id);
-    window.scrollTo(0, 0);
     fitCanvas();
+    cancelAnimationFrame(navigationFrame);
+    const activeSlide = slides[current];
+    // Moving focus away from the bottom controls prevents the browser from
+    // pulling the viewport back down after their click or select interaction.
+    if (updateHash) activeSlide.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    navigationFrame = requestAnimationFrame(() => {
+      fitCanvas();
+      if (updateHash) activeSlide.focus({ preventScroll: true });
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    });
   }
   function fromHash() { const index = slides.findIndex(slide => slide.id === location.hash.slice(1)); show(index < 0 ? 0 : index, false); }
   previous.addEventListener('click', () => show(current - 1)); next.addEventListener('click', () => show(current + 1));
