@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#125740">
+  <meta name="description" content="Who helped set up India's newest GCCs: the outside parties each announcement names, with the sentence that proves it.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='12' fill='%23125740'/%3E%3Cpath d='M14 34 34 14M18 14h16v16' stroke='white' stroke-width='3' fill='none'/%3E%3C/svg%3E">
+  <!-- page:start -->
+  <title>GCC Compass</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&display=swap">
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to the record</a>
+
+  <header class="top">
+    <a class="brand" href="#" aria-label="GCC Compass">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="12"/><path d="M14 34 34 14M18 14h16v16"/></svg>
+      GCC<span>Compass</span>
+    </a>
+    <nav aria-label="On this page">
+      <a href="#record">The record</a>
+      <a href="#read">Read a source</a>
+      <a href="#method">Method</a>
+    </nav>
+  </header>
+
+  <main id="main" tabindex="-1">
+    <section class="hero">
+      <h1>Who really helped set up<br><em>India’s newest GCCs?</em></h1>
+      <p class="lede">A company opening a GCC deals with advisers, landlords, recruiters, payroll firms, lawyers and state governments. We read the <span data-fill="sources"></span> sources behind Flexiple’s list of new centres and wrote down every outside party each one names, with the sentence that proves it.</p>
+      <p class="gcc"><strong>GCC</strong> means Global Capability Centre: a company’s own team in another country.</p>
+    </section>
+
+    <section class="finding" aria-labelledby="finding-title">
+      <h2 id="finding-title">Most of the chain stays out of sight</h2>
+      <p id="finding-lede" class="section-lede"></p>
+      <div id="coverage" class="coverage"></div>
+      <div id="players" class="players"></div>
+    </section>
+
+    <section id="record" aria-labelledby="record-title">
+      <h2 id="record-title" tabindex="-1">The record</h2>
+      <p class="section-lede"><span data-fill="records"></span> announcements. Open one to see who it names and the sentence it rests on. Every quote was copied from its source page and matched there on <span data-fill="checked"></span>.</p>
+      <div class="filters">
+        <label class="sr-only" for="filter-query">Search the record</label>
+        <input id="filter-query" type="search" placeholder="Search a company, city or named party" autocomplete="off">
+        <label class="sr-only" for="filter-city">City</label>
+        <select id="filter-city"><option value="">Every city</option></select>
+        <label class="sr-only" for="filter-names">Who it names</label>
+        <select id="filter-names"><option value="">Names anyone or no one</option></select>
+        <span id="record-count" role="status"></span>
+      </div>
+      <div id="added" hidden>
+        <h3>Added by you</h3>
+        <div id="added-list"></div>
+        <h3>Checked record</h3>
+      </div>
+      <div id="record-list"></div>
+      <button type="button" id="show-all" class="button ghost show-all"></button>
+      <p id="no-records" class="empty" hidden>Nothing in the record matches. <button type="button" id="clear-filters" class="link">Clear the filters</button></p>
+    </section>
+
+    <section id="read" aria-labelledby="read-title">
+      <h2 id="read-title">Read a new source</h2>
+      <p class="section-lede">Paste an announcement. AI pulls out the company, the city and anyone else it names. Then a plain program looks for every quoted sentence in your text and drops any that is not there, word for word.</p>
+      <div class="reader">
+        <p class="reader-samples">Try one: <span id="samples" class="chips"></span></p>
+        <label class="field-label" for="source-text">The source text</label>
+        <textarea id="source-text" rows="7" placeholder="Paste the text of a press release or news report about a new centre in India"></textarea>
+        <label class="field-label" for="source-url">Link to the source <span>optional</span></label>
+        <input id="source-url" type="url" placeholder="https://" autocomplete="off">
+        <p class="reader-actions">
+          <button type="button" id="read-source" class="button">Read it</button>
+          <span id="reader-status" role="status"></span>
+        </p>
+        <p id="reader-mode" class="reader-mode"></p>
+        <div id="reader-result" class="result" hidden></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="cost-title">
+      <details id="cost" class="sketch">
+        <summary><span><strong id="cost-title">Rough cost sketch</strong> What <span id="cost-summary"></span> might cost a year in six cities</span></summary>
+        <div class="sketch-body">
+          <p class="sketch-note">Salaries start from the median software engineer pay published by <span id="salary-source"></span>. Desk rent and the other two numbers are examples. Change any of them.</p>
+          <div class="sketch-inputs">
+            <div>
+              <label class="field-label" for="team">People</label>
+              <div class="team-row">
+                <input id="team" name="team" type="number" step="1" inputmode="numeric" required aria-describedby="team-hint">
+                <div class="presets" role="group" aria-label="Quick team sizes">
+                  <button type="button" data-team="15">15</button>
+                  <button type="button" data-team="40">40</button>
+                  <button type="button" data-team="150">150</button>
+                </div>
+              </div>
+            </div>
+            <label><span class="field-label">Desk rent <span>₹ a month</span></span><input id="desk" type="number" name="desk" step="1" inputmode="numeric" required></label>
+            <label><span class="field-label">Extra people costs <span>% of salary</span></span><input id="overhead" type="number" name="overhead" step="1" inputmode="numeric" required></label>
+            <label><span class="field-label">Desks per 100 people</span><input id="desks" type="number" name="desks" step="1" inputmode="numeric" required></label>
+          </div>
+          <p id="cost-verdict" class="sketch-verdict" role="status"></p>
+          <div class="table-scroll">
+            <table class="sketch-table">
+              <thead><tr><th scope="col">City</th><th scope="col">Salary per person <span>₹ lakh a year</span></th><th scope="col">Cost a year</th><th scope="col">Per person</th></tr></thead>
+              <tbody id="cost-rows"></tbody>
+            </table>
+          </div>
+          <p class="plan-foot"><span id="team-hint"><span id="team-range"></span> people, <span id="cost-desks"></span>. Yearly cost = salaries + extra people costs + desk rent for 12 months. Setting up, hiring, taxes, travel and incentives are not included.</span><button type="button" id="reset" class="link">Start over</button></p>
+        </div>
+      </details>
+    </section>
+
+    <section id="method" aria-labelledby="method-title">
+      <h2 id="method-title">Method</h2>
+      <div class="faq">
+        <details>
+          <summary>Where do these announcements come from?</summary>
+          <p>They are the sources cited on <a href="https://flexiple.com/gcc/india" target="_blank" rel="noopener noreferrer">Flexiple’s list of new and upcoming GCCs in India</a>, as it stood on 13 Oct 2026: 43 sources behind its 48 cards. One of those sources no longer exists and is left out. One comes from a site that blocks automated reading, so its quote was read once and is not re-checked.</p>
+        </details>
+        <details>
+          <summary>How does a quote get in?</summary>
+          <p>AI reads the source and proposes the company, the city and anyone else named, each with one quoted sentence. A plain program then looks for every quoted sentence on the page itself. <strong>A quote that is not there word for word is thrown away.</strong> A person reviews what is left. The same check runs every time the record is rebuilt, so a page that changes or disappears is caught.</p>
+        </details>
+        <details>
+          <summary>What does “named” mean?</summary>
+          <p>Only that the source says so. A press release that names no recruiter does not show that none was used. That gap is the finding: the public record shows a small part of who was involved, so a newcomer still has to ask around.</p>
+        </details>
+        <details>
+          <summary>What is this not?</summary>
+          <p>It is not a rating of any firm and not a full list of new centres. Announcements favour large companies and good news. A hiring figure is a plan unless the source says otherwise.</p>
+        </details>
+        <details>
+          <summary>What are lakh and crore?</summary>
+          <p>Indian number words. <strong>1 lakh</strong> is 100,000 and <strong>1 crore</strong> is 10 million. So ₹18 lakh is ₹1.8 million, and ₹22 crore is ₹220 million.</p>
+        </details>
+      </div>
+      <p class="footnote">Sources last checked on <span data-fill="checked"></span>. What you add and the cost sketch are saved in this browser only.</p>
+    </section>
+
+    <section class="save" aria-labelledby="save-title">
+      <div>
+        <h2 id="save-title">Take the record with you</h2>
+        <p>Every announcement, every named party, every quote and every source link, as one document.</p>
+        <p id="save-note" class="save-note" role="status"></p>
+      </div>
+      <div class="save-actions">
+        <button type="button" id="copy" class="button">Copy as text</button>
+        <button type="button" id="download" class="button ghost">Download</button>
+        <button type="button" id="print" class="button ghost">Print or save as PDF</button>
+      </div>
+      <textarea id="copy-fallback" rows="6" readonly hidden aria-label="The record as text"></textarea>
+    </section>
+  </main>
+
+  <footer class="foot"><span>GCC Compass</span><span>Working prototype · Sources: Flexiple’s list of new GCCs</span></footer>
+
+  <article id="report" class="report"></article>
+  <noscript><p class="noscript">Turn on JavaScript to open the record.</p></noscript>
+  <!-- page:end -->
+</body>
+</html>

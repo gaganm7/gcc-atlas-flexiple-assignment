@@ -1,0 +1,6 @@
+.sites-runtime/
+.qa/
+node_modules/
+.openai/
+docs/
+deck/
