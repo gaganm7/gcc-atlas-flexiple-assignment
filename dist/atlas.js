@@ -9,7 +9,7 @@ const safe = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp
 const external = (url, label) => `<a href="${safe(url)}" target="_blank" rel="noopener noreferrer">${safe(label)}</a>`;
 const STORAGE_PLAN = 'gcc-atlas-plan-v1', STORAGE_SAVED = 'gcc-atlas-decisions-v1', STORAGE_PROVIDERS = 'gcc-atlas-providers-v1';
 const CATEGORY_NAMES = { setup: 'GCC setup & operations', legal: 'Legal & entity setup', tax: 'Tax, audit & compliance', talent: 'Recruitment & talent', payroll: 'Payroll & EOR', property: 'Office space' };
-const PAGE_NAMES = { overview: 'Overview', decision: 'Compare cities', companies: 'GCC Explorer', providers: 'Provider Explorer', saved: 'Saved decisions' };
+const PAGE_NAMES = { decision: 'Compare cities', companies: 'Company evidence', providers: 'Find services', saved: 'Saved plans' };
 const textDate = value => value ? formatDate(value) : 'Date not stated';
 const checkedLabel = record => record.check === 'matched' ? 'Quote matched to source' : 'Read once; not automatically rechecked';
 const currentDate = () => new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(new Date());
@@ -20,16 +20,16 @@ let shortlistedProviderIds = cleanProviderIds(readStored(STORAGE_PROVIDERS, []))
 let savedDecisions = readStored(STORAGE_SAVED, []);
 if (!Array.isArray(savedDecisions)) savedDecisions = [];
 savedDecisions = savedDecisions.filter(item => item && typeof item.id === 'string' && item.plan && typeof item.createdAt === 'string').map(item => ({ id: item.id, createdAt: item.createdAt, plan: normalizeAtlasPlan(item.plan), providerIds: cleanProviderIds(item.providerIds) })).slice(0, 50);
-let atlasPage = 'overview', atlasTimer;
+let atlasPage = 'decision', atlasTimer;
 let storageAvailable = true;
 function persist(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { storageAvailable = false; return false; } }
 function atlasToast(message) { clearTimeout(atlasTimer); atlas$('#atlas-toast').textContent = message; atlas$('#atlas-toast').hidden = false; atlasTimer = setTimeout(() => { atlas$('#atlas-toast').hidden = true; }, 3800); }
-function setAtlasPage(page, scroll = true) {
-  atlasPage = Object.hasOwn(PAGE_NAMES, page) ? page : 'overview';
+function setAtlasPage(page, scroll = true, updateHistory = true) {
+  atlasPage = Object.hasOwn(PAGE_NAMES, page) ? page : 'decision';
   atlasAll('.atlas-view').forEach(view => { view.hidden = view.id !== `atlas-view-${atlasPage}`; });
-  atlasAll('.atlas-sidebar [data-page]').forEach(button => { const selected = button.dataset.page === atlasPage; button.classList.toggle('selected', selected); if (selected) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current'); });
-  atlas$('#atlas-page-title').textContent = PAGE_NAMES[atlasPage];
-  history.replaceState(null, '', `#${atlasPage}`);
+  atlasAll('.planner-nav [data-page]').forEach(button => { const selected = button.dataset.page === atlasPage; button.classList.toggle('selected', selected); if (selected) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current'); });
+  document.title = `${PAGE_NAMES[atlasPage]} | GCC Atlas`;
+  if (updateHistory && location.hash !== `#${atlasPage}`) history.pushState(null, '', `#${atlasPage}`);
   if (scroll) window.scrollTo({ top: 0, behavior: 'instant' });
 }
 // These tags are editorial search aids inferred from the words in the existing source record.
@@ -52,10 +52,6 @@ const atlasCompanies = [...companyGroups.values()].map(group => {
   return { ...group, ...tags, latest: group.records[0].publishedOn || '' };
 });
 
-function renderOverview() {
-  atlas$('#atlas-overview-metrics').innerHTML = [{ value: evidence.records.length, label: 'Source-linked announcements in this sample' }, { value: ATLAS_CITIES.length, label: 'Cities in the planning model' }, { value: ATLAS_PROVIDERS.length, label: 'Providers with inspected source pages' }].map(metric => `<div class="metric"><strong>${metric.value}</strong><span>${metric.label}</span></div>`).join('');
-  atlas$('#atlas-recent').innerHTML = [...evidence.records].sort((a, b) => (b.publishedOn || '').localeCompare(a.publishedOn || '')).slice(0, 5).map(record => `<tr><td><strong>${safe(record.company)}</strong></td><td>${safe(record.cities.join(', '))}</td><td>${EVENTS[record.event]}</td><td>${textDate(record.publishedOn)}</td><td><button class="link-button" data-company="${safe(record.id)}">View source</button></td></tr>`).join('');
-}
 function fillAtlasForm() {
   const plan = atlasPlan;
   atlas$('#atlas-functions').innerHTML = Object.entries(FUNCTIONS).map(([id, label]) => `<label><input type="checkbox" name="functions" value="${id}" ${plan.functions.includes(id) ? 'checked' : ''}>${label}</label>`).join('');
@@ -78,7 +74,7 @@ function syncAtlasForm(showErrors = false) {
     atlas$('#atlas-input-error').textContent = error;
     atlas$('#atlas-save').disabled = true; atlas$('#atlas-report').disabled = true;
     atlas$('#atlas-results').setAttribute('data-stale', 'true');
-    if (showErrors && invalid) { atlas$('#atlas-advanced').open = true; invalid.reportValidity(); }
+    if (showErrors && invalid) { invalid.closest('details')?.setAttribute('open', ''); invalid.reportValidity(); }
     return false;
   }
   const next = JSON.parse(JSON.stringify(atlasPlan));
@@ -98,7 +94,7 @@ function renderAtlasResults() {
   atlas$('#atlas-save').disabled = !lead; atlas$('#atlas-report').disabled = !lead;
   atlas$('#atlas-warnings').innerHTML = result.warnings.filter(warning => warning.kind !== 'assumptions').map(warning => `<div class="warning ${warning.kind.startsWith('budget') ? 'budget' : ''}">${safe(warning.message)}</div>`).join('');
   atlas$('#atlas-recommendation').innerHTML = lead ? `<strong>${lead.name} ranks first under your current assumptions.</strong><p>${atlasPlan.headcount} people · ${money(result.budgetRupees)} budget · ${atlasPlan.timeline}-month target. ${safe(result.scopeExplanation)}</p>` : '<strong>No ranking yet.</strong><p>Include a city and give at least one criterion a weight above zero.</p>';
-  atlas$('#atlas-city-grid').innerHTML = result.ranked.map((city, index) => `<article class="result-card ${index === 0 ? 'lead' : ''}" data-atlas-city="${city.id}"><header><span>OPTION ${index + 1}</span><span>${index === 0 ? 'Leads this scenario' : 'Compare the trade-offs'}</span></header><div class="card-body"><h3>${city.name}</h3><div class="card-stats"><div><span>Scenario score · demo assessments</span><strong>${city.score.toFixed(1)} <small>/ 100</small></strong></div><div><span>Estimated recurring cost</span><strong>${money(city.costs.total)}</strong><small>per year · partial cost model</small></div></div><ul>${city.reasons.slice(0, 2).map(reason => `<li>${safe(reason)}</li>`).join('')}</ul><p class="tradeoff">${safe(city.tradeoffs.slice(0, 2).join(' '))}</p></div><footer><button class="link-button" data-city-evidence="${city.id}">See company evidence</button><button class="link-button" data-city-score="${city.id}">Inspect the score</button></footer></article>`).join('');
+  atlas$('#atlas-city-grid').innerHTML = result.ranked.map((city, index) => `<article class="result-card ${index === 0 ? 'lead' : ''}" data-atlas-city="${city.id}"><header><span>OPTION ${index + 1}</span><span>${index === 0 ? 'Leads this scenario' : 'Compare the trade-offs'}</span></header><div class="card-body"><h3>${city.name}</h3><div class="card-stats"><div><span>Scenario score · demo assessments</span><strong>${city.score.toFixed(1)} <small>/ 100</small></strong></div><div><span>Estimated recurring cost</span><strong>${money(city.costs.total)}</strong><small>per year · partial cost model</small></div></div><details class="result-detail"><summary>Why this city?</summary><ul>${city.reasons.slice(0, 2).map(reason => `<li>${safe(reason)}</li>`).join('')}</ul><p class="tradeoff">${safe(city.tradeoffs.slice(0, 2).join(' '))}</p></details></div><footer><button class="link-button" data-city-evidence="${city.id}">See company evidence</button><button class="link-button" data-city-score="${city.id}">Inspect the score</button></footer></article>`).join('');
   atlas$('#atlas-score-head').innerHTML = `<tr><th>Points contributed</th>${result.ranked.map(city => `<th>${city.name}</th>`).join('')}</tr>`;
   atlas$('#atlas-score-body').innerHTML = CRITERIA.map(criterion => `<tr><td>${criterion.label}<small>Weight ${atlasPlan.weights[criterion.id]}%</small></td>${result.ranked.map(city => { const component = city.components.find(item => item.id === criterion.id); return `<td><strong>${component.contribution.toFixed(1)} points</strong><small>Rating ${component.raw.toFixed(2)} / 5</small></td>`; }).join('')}</tr>`).join('') + `<tr><td><strong>Total</strong></td>${result.ranked.map(city => `<td><strong>${city.score.toFixed(1)} / 100</strong></td>`).join('')}</tr>`;
   atlas$('#atlas-roadmap').innerHTML = result.roadmap.map(stage => `<li><strong>${safe(stage.title)}</strong><p>${safe(stage.description)}</p></li>`).join('');
@@ -132,10 +128,11 @@ function renderCompanyList() {
 function clearCompanies() { for (const id of ['atlas-company-query', 'atlas-company-city', 'atlas-company-sector', 'atlas-company-function']) atlas$(`#${id}`).value = ''; renderCompanyList(); }
 function renderProviders() {
   const query = atlas$('#atlas-provider-query').value.trim().toLowerCase(), category = atlas$('#atlas-provider-category').value, city = atlas$('#atlas-provider-city').value, status = atlas$('#atlas-provider-evidence').value;
+  atlasAll('[data-service]').forEach(button => { const selected = button.dataset.service === category; button.setAttribute('aria-pressed', String(selected)); });
   const providers = ATLAS_PROVIDERS.filter(provider => (!category || provider.category === category) && (!city || provider.cities.includes(city) || provider.cities.includes('India')) && (!status || (status === 'relationship' ? provider.announcementIds.length > 0 : provider.announcementIds.length === 0)) && `${provider.name} ${provider.description} ${provider.services.join(' ')}`.toLowerCase().includes(query));
   atlas$('#atlas-provider-count').textContent = `${providers.length} of ${ATLAS_PROVIDERS.length} providers${city ? ' · includes stated India-wide scope' : ''}`;
   atlas$('#atlas-provider-empty').hidden = providers.length > 0;
-  atlas$('#atlas-provider-grid').innerHTML = providers.map(provider => `<article class="panel provider-card" data-provider-card="${provider.id}"><span class="tag">${CATEGORY_NAMES[provider.category]}</span><h2>${provider.name}</h2><p>${safe(provider.description)}</p><p class="location">${provider.cities.includes('India') ? 'Stated country scope: India' : `Documented locations: ${safe(provider.cities.join(', '))}`}</p><div class="tags">${provider.services.slice(0, 3).map(service => `<span class="tag">${safe(service)}</span>`).join('')}</div><footer><span>${provider.verification}</span><button class="link-button" data-provider="${provider.id}">View evidence</button></footer><div class="provider-select">${providerSelectButton(provider)}</div></article>`).join('');
+  atlas$('#atlas-provider-grid').innerHTML = providers.map(provider => `<article class="panel provider-card" data-provider-card="${provider.id}"><span class="tag">${CATEGORY_NAMES[provider.category]}</span><h2>${provider.name}</h2><p class="location">${provider.cities.includes('India') ? 'Stated country scope: India' : `Documented locations: ${safe(provider.cities.join(', '))}`}</p><div class="tags">${provider.services.slice(0, 3).map(service => `<span class="tag">${safe(service)}</span>`).join('')}</div><footer><span>${provider.verification}</span><button class="link-button" data-provider="${provider.id}">View evidence</button></footer><div class="provider-select">${providerSelectButton(provider)}</div></article>`).join('');
 }
 function clearProviders() { for (const id of ['atlas-provider-query', 'atlas-provider-category', 'atlas-provider-city', 'atlas-provider-evidence']) atlas$(`#${id}`).value = ''; renderProviders(); }
 function providerSelectButton(provider) { const selected = shortlistedProviderIds.includes(provider.id); return `<button class="button ${selected ? 'secondary' : 'primary'}" data-shortlist-provider="${provider.id}" aria-pressed="${selected}">${selected ? 'Remove from my shortlist' : 'Add to my shortlist'}</button>`; }
@@ -149,7 +146,7 @@ function providerBriefHtml() {
 }
 function renderProviderShortlist() {
   const providers = shortlistedProviderIds.map(id => ATLAS_PROVIDERS.find(provider => provider.id === id));
-  atlas$('#atlas-shortlist-summary').textContent = providers.length ? `${providers.length} provider${providers.length === 1 ? '' : 's'} chosen by you. Included when you save or export this decision.` : 'Choose providers after reading their evidence. Your choices travel with the saved decision.';
+  atlas$('#atlas-shortlist-summary').textContent = providers.length ? `${providers.length} provider${providers.length === 1 ? '' : 's'} chosen by you. Included when you save or export this decision.` : 'No providers yet. Browse services to start your shortlist.';
   atlas$('#atlas-shortlist-items').innerHTML = providers.map(provider => `<li><div><strong>${safe(provider.name)}</strong><small>${safe(provider.verification)} · ${safe(CATEGORY_NAMES[provider.category])}</small></div><button class="link-button" data-provider="${provider.id}">Evidence</button><button class="link-button" data-shortlist-provider="${provider.id}">Remove</button></li>`).join('');
   atlas$('#atlas-provider-selection-count').textContent = `${providers.length} provider${providers.length === 1 ? '' : 's'} in your shortlist`;
 }
@@ -203,6 +200,8 @@ function showAtlasMethod() {
   openAtlasDetail('HOW THIS PROTOTYPE WORKS', `<h2>Facts, estimates, and choices.</h2><ol class="method-list"><li><strong>Company facts:</strong> Claude’s existing source record, with exact quotations, dates, and check status.</li><li><strong>Provider facts:</strong> official service pages or specifically named relationships. Marketing does not establish delivery quality.</li><li><strong>Salary references:</strong> software-engineer medians published by Flexiple, August 2026. A dated reference, not a hiring quote.</li><li><strong>Your choices:</strong> team, functions, budget scope, timeline target, and priorities.</li><li><strong>Demo assessments:</strong> talent, readiness, ecosystem fit, and execution confidence use editable illustrative 1–5 ratings. They are not sourced city statistics.</li></ol><h3>The formula</h3><p>${safe(ATLAS_METHODOLOGY)}</p><h3>What is AI doing?</h3><p>The city model is deterministic. The separate source reader can call Claude inside the existing Claude Artifact and checks every proposed quotation. Outside Claude it explains its limits and replays only its three saved, checked samples.</p><h3>What stays unknown?</h3><p>Current role-specific hiring capacity, provider outcomes, exact office quotes, policy eligibility, and one-time setup costs. No incentive savings are deducted.</p><p>Sector/work tags are editorial aids inferred from source descriptions. Parent entities and current headcount stay unrecorded where the source model does not establish them.</p>`);
 }
 document.addEventListener('click', event => {
+  const service = event.target.closest('[data-service]');
+  if (service) { atlas$('#atlas-provider-category').value = atlas$('#atlas-provider-category').value === service.dataset.service ? '' : service.dataset.service; renderProviders(); return; }
   const page = event.target.closest('[data-page]'); if (page) return setAtlasPage(page.dataset.page);
   const close = event.target.closest('[data-close]'); if (close) return document.getElementById(close.dataset.close).close();
   const company = event.target.closest('[data-company]'); if (company) return showCompanyProfile(company.dataset.company);
@@ -227,7 +226,6 @@ atlas$('#atlas-plan-form').addEventListener('submit', event => { event.preventDe
 atlas$('#atlas-reset').addEventListener('click', () => { atlasPlan = defaultAtlasPlan(); shortlistedProviderIds = []; persist(STORAGE_PROVIDERS, shortlistedProviderIds); renderProviderShortlist(); renderProviders(); fillAtlasForm(); renderAtlasResults(); persist(STORAGE_PLAN, atlasPlan); atlas$('#atlas-input-error').textContent = ''; atlasToast('Starting example restored.'); });
 atlas$('#atlas-save').addEventListener('click', saveAtlasDecision);
 atlas$('#atlas-report').addEventListener('click', showAtlasReport);
-atlas$('#atlas-global-search').addEventListener('submit', event => { event.preventDefault(); clearCompanies(); atlas$('#atlas-company-query').value = atlas$('#atlas-global-query').value; renderCompanyList(); setAtlasPage('companies'); });
 for (const id of ['atlas-company-query', 'atlas-company-city', 'atlas-company-sector', 'atlas-company-function', 'atlas-company-sort']) atlas$(`#${id}`).addEventListener(id.endsWith('query') ? 'input' : 'change', renderCompanyList);
 for (const id of ['atlas-provider-query', 'atlas-provider-category', 'atlas-provider-city', 'atlas-provider-evidence']) atlas$(`#${id}`).addEventListener(id.endsWith('query') ? 'input' : 'change', renderProviders);
 atlas$('#atlas-clear-company').addEventListener('click', clearCompanies); atlas$('#atlas-clear-provider').addEventListener('click', clearProviders);
@@ -245,7 +243,10 @@ atlasAll('dialog').forEach(dialog => {
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
   });
 });
-window.addEventListener('hashchange', () => { const page = location.hash.slice(1); if (Object.hasOwn(PAGE_NAMES, page)) setAtlasPage(page); });
+window.addEventListener('hashchange', () => setAtlasPage(location.hash.slice(1), true, false));
+window.addEventListener('popstate', () => setAtlasPage(location.hash.slice(1), true, false));
 for (const [id, values] of [['atlas-company-city', [...new Set(atlasCompanies.flatMap(company => company.cities))].sort()], ['atlas-company-sector', [...new Set(atlasCompanies.map(company => company.sector))].sort()]]) atlas$(`#${id}`).insertAdjacentHTML('beforeend', values.map(value => `<option value="${safe(value)}">${safe(value)}</option>`).join(''));
 atlas$('#atlas-company-function').insertAdjacentHTML('beforeend', Object.entries(FUNCTIONS).map(([id, label]) => `<option value="${id}">${label}</option>`).join(''));
-fillAtlasForm(); renderOverview(); renderAtlasResults(); renderCompanyList(); renderProviders(); renderProviderShortlist(); renderSaved(); setAtlasPage(location.hash.slice(1), false);
+const initialService = new URLSearchParams(location.search).get('service');
+if (Object.hasOwn(CATEGORY_NAMES, initialService)) atlas$('#atlas-provider-category').value = initialService;
+fillAtlasForm(); renderAtlasResults(); renderCompanyList(); renderProviders(); renderProviderShortlist(); renderSaved(); setAtlasPage(location.hash.slice(1), false, false);
