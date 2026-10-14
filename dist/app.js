@@ -1,11 +1,10 @@
 import { evidence } from './evidence.js';
-import { CITIES, EVENTS, KINDS, LIMITS, LINKS, MAX_SOURCE, SALARY_SOURCE, UNNAMED, checkExtraction, costVerdict, costs, coverage, defaultState, extractionPrompt, formatDate, matches, money, normalize, normalizeState, players, rankCities } from './model.js';
+import { CITIES, EVENTS, KINDS, LIMITS, LINKS, SALARY_SOURCE, checkExtraction, costVerdict, costs, coverage, defaultState, formatDate, matches, money, normalizeState, players, rankCities } from './model.js';
 import { buildReport, findingSentence, toHtml, toMarkdown, escapeHtml } from './report.js';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const PLAN_KEY = 'gcc-compass-plan-v2';
-const ADDED_KEY = 'gcc-compass-added-v1';
 const records = evidence.records;
 const checkedOn = formatDate(evidence.checkedOn);
 
@@ -17,18 +16,14 @@ function save(key, value) {
 }
 const safeUrl = value => { try { const url = new URL(value); return ['http:', 'https:'].includes(url.protocol) ? url.href : ''; } catch { return ''; } };
 
-// Inside Claude the page can ask Claude to read a source and can hand over a file. Anywhere else both are absent.
+// Saved research demonstrations never call a model. The optional host capability only saves downloads.
 const inClaude = Boolean(window.claude?.use);
 const capability = name => inClaude ? window.claude.use(name).catch(() => null) : Promise.resolve(null);
-const ai = capability('sample');
 const downloads = capability('downloads');
 
 let plan = normalizeState(load(PLAN_KEY));
-let added = cleanAdded(load(ADDED_KEY));
 const PREVIEW = 8;    // entries listed before "Show all"
 let showAll = false;
-let reading = null;   // AbortController of the read in progress
-let result = null;    // the last source read: { record, dropped, url }
 
 // ---------- The record ----------
 
@@ -37,41 +32,35 @@ const listed = values => values.join(', ');
 function proof(label, name, role, quote) {
   return `<div><dt>${label}${name ? ` <strong>${escapeHtml(name)}</strong>` : ''}${role ? ` <span>${escapeHtml(role)}</span>` : ''}</dt><dd>${escapeHtml(quote)}</dd></div>`;
 }
-// What a source proves, shared by the record and by a source that was just read.
+// Recorded relationships, shared by the curated record and the saved research demonstrations.
 function proofList(record) {
   const named = Object.keys(LINKS).filter(key => record[key]);
-  const missing = [...Object.keys(LINKS).filter(key => !record[key]).map(key => LINKS[key].label.toLowerCase()), ...UNNAMED.map(name => name.toLowerCase())];
+  const missing = Object.keys(LINKS).filter(key => !record[key]).map(key => LINKS[key].label.toLowerCase());
   return `<dl class="proof">
       ${named.map(key => proof(LINKS[key].label, record[key].name, record[key].role, record[key].quote)).join('')}
       ${proof('The centre', '', '', record.receipt)}
       ${record.hiring ? proof('Hiring', record.hiring.claim, '', record.hiring.quote) : ''}
     </dl>
-    <p class="unnamed">Not named in this source: ${listed(missing)}.</p>`;
+    <p class="unnamed">${missing.length ? `No recorded relationship in these categories: ${listed(missing)}.` : 'All three tracked relationship types are recorded.'} Other parties may be mentioned; involvement does not establish quality.</p>`;
 }
-function entry(record, mine = false) {
+function entry(record) {
   const named = Object.keys(LINKS).filter(key => record[key]);
-  const when = mine ? `added ${formatDate(record.addedOn)}` : record.publishedOn ? formatDate(record.publishedOn) : 'no date on the page';
+  const when = record.publishedOn ? formatDate(record.publishedOn) : 'no date on the page';
   const chips = named.length
     ? named.map(key => `<span class="chip">${record[key].name.startsWith(LINKS[key].label) ? '' : LINKS[key].label + ': '}${escapeHtml(record[key].name)}</span>`).join('')
-    : '<span class="chip none">Nobody else named</span>';
-  const url = mine ? safeUrl(record.url) : record.source.url;
-  const check = mine ? 'Quotes checked against the text you pasted. The source itself has not been checked.'
-    : record.check === 'matched' ? `Quotes copied from the live page and matched on ${checkedOn}.` : record.checkNote;
-  const source = mine
-    ? (url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Source you gave <span aria-hidden="true">↗</span></a>` : 'No source link given')
-    : `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(record.source.title)} <span aria-hidden="true">↗</span></a> · ${escapeHtml(record.source.publisher)} · ${KINDS[record.source.kind]}`;
+    : '<span class="chip none">No tracked relationship</span>';
+  const check = record.check === 'matched' ? `Quotes matched to the source snapshot checked on ${checkedOn}.` : record.checkNote;
   return `<details class="entry" id="${escapeHtml(record.id)}">
     <summary><span class="entry-info">
       <span class="entry-name">${escapeHtml(record.company)}</span>
       <span class="entry-place">${escapeHtml(listed(record.cities))} · ${EVENTS[record.event]} · ${when}</span>
-      <span class="chips">${mine ? '<span class="chip mine">Added by you</span>' : ''}${chips}</span>
+      <span class="chips">${chips}</span>
     </span></summary>
     <div class="entry-body">
       ${record.summary ? `<p>${escapeHtml(record.summary)}</p>` : ''}
       ${proofList(record)}
-      <p class="source">${source}</p>
+      <p class="source"><a href="${escapeHtml(record.source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(record.source.title)} <span aria-hidden="true">↗</span></a> · ${escapeHtml(record.source.publisher)} · ${KINDS[record.source.kind]}</p>
       <p class="check">${escapeHtml(check)}</p>
-      ${mine ? `<button type="button" class="link" data-remove="${escapeHtml(record.id)}">Remove this entry</button>` : ''}
     </div>
   </details>`;
 }
@@ -84,9 +73,7 @@ function buildFinding() {
     ...rows.map(row => `<button type="button" class="meter" data-names="${row.key}" title="${escapeHtml(row.help)}">
       <span class="meter-label">${row.label}</span>
       <span class="meter-track"><span class="meter-fill" style="width:${(row.named / total * 100).toFixed(1)}%"></span></span>
-      <span class="meter-value">${row.named} of ${total}</span></button>`),
-    ...UNNAMED.map(name => `<div class="meter">
-      <span class="meter-label">${name}</span><span class="meter-track"></span><span class="meter-value">0 of ${total}</span></div>`)
+      <span class="meter-value">${row.named} of ${total}</span></button>`)
   ].join('');
   const groups = Object.fromEntries(Object.keys(LINKS).map(key => [key, []]));
   for (const player of players(records)) groups[player.kind].push(player);
@@ -99,11 +86,7 @@ function buildRecord() {
   $('#record-list').innerHTML = records.map(record => entry(record)).join('');
   const cities = [...new Set(records.flatMap(record => record.cities))].sort();
   $('#filter-city').insertAdjacentHTML('beforeend', cities.map(city => `<option>${escapeHtml(city)}</option>`).join(''));
-  $('#filter-names').insertAdjacentHTML('beforeend', Object.entries(LINKS).map(([key, link]) => `<option value="${key}">Names ${link.one}</option>`).join('') + '<option value="nobody">Names nobody else</option>');
-}
-function renderAdded() {
-  $('#added-list').innerHTML = added.map(record => entry(record, true)).join('');
-  $('#added').hidden = !added.length;
+  $('#filter-names').insertAdjacentHTML('beforeend', Object.entries(LINKS).map(([key, link]) => `<option value="${key}">Names ${link.one}</option>`).join('') + '<option value="nobody">No tracked relationship</option>');
 }
 // With no filter set the list opens on its first few entries, so the page is not one long scroll.
 function applyFilter() {
@@ -130,98 +113,34 @@ function showFiltered(change) {
   $('#record-title').focus({ preventScroll: true });
 }
 
-// Whatever sits in storage is checked again before it is shown.
-function cleanAdded(value) {
-  if (!Array.isArray(value)) return [];
-  const text = item => typeof item === 'string' ? item.slice(0, 700) : '';
-  return value.slice(0, 20).filter(item => item && typeof item === 'object' && text(item.company) && text(item.receipt)).map((item, index) => {
-    const record = {
-      id: `mine-${index}`, company: text(item.company), cities: (Array.isArray(item.cities) ? item.cities : []).map(text).filter(Boolean).slice(0, 3),
-      event: Object.hasOwn(EVENTS, item.event) ? item.event : 'announced', summary: text(item.summary), receipt: text(item.receipt),
-      url: safeUrl(item.url), addedOn: /^\d{4}-\d{2}-\d{2}$/.test(item.addedOn) ? item.addedOn : evidence.checkedOn
-    };
-    for (const key of Object.keys(LINKS)) if (item[key] && text(item[key].name) && text(item[key].quote)) record[key] = { name: text(item[key].name), role: text(item[key].role), quote: text(item[key].quote) };
-    if (item.hiring && text(item.hiring.claim) && text(item.hiring.quote)) record.hiring = { claim: text(item.hiring.claim), quote: text(item.hiring.quote) };
-    return record;
-  });
-}
+// ---------- Saved research demonstrations ----------
 
-// ---------- Reading a new source ----------
-
-const READ_ERRORS = {
-  not_granted: 'Claude was not allowed for this page, so live reading is off. The samples still show a saved answer.',
-  sampling_disabled: 'Claude is not available for this account, so live reading is off. The samples still show a saved answer.',
-  rate_limited: 'Claude is busy, or your usage limit is reached. Try again later.',
-  session_expired: 'Sign in to Claude again, then retry.',
-  refused: 'Claude declined to read this text.',
-  prompt_too_large: 'That text is too long. Paste the main part of the announcement.'
-};
-function setStatus(message) { $('#reader-status').textContent = message; }
-
-async function readSource() {
-  const text = $('#source-text').value.trim();
-  if (reading) { reading.abort(); return; }
-  $('#reader-result').hidden = true;
-  if (text.length < 80) return setStatus('Paste the announcement first: at least a few sentences.');
-  if (text.length > MAX_SOURCE) return setStatus(`That is too long. Paste up to ${MAX_SOURCE.toLocaleString('en-IN')} characters: the main part of the announcement.`);
-  const sample = evidence.samples.find(item => normalize(item.text) === normalize(text));
-  setStatus('Checking whether Claude is connected…');
-  const live = await ai;
-  setStatus('');
-  let reply;
-  let origin;
-  if (live) {
-    reading = new AbortController();
-    $('#read-source').textContent = 'Stop';
-    setStatus('Claude is reading the text…');
-    try {
-      reply = await live.json(extractionPrompt(text), { modelTier: 'quick', signal: reading.signal });
-      origin = 'Read by Claude just now.';
-    } catch (error) {
-      setStatus(error?.code === 'cancelled' ? 'Stopped.' : READ_ERRORS[error?.code] || 'The reply could not be read. Try again.');
-      if (!sample || error?.code === 'cancelled') return;
-    } finally {
-      reading = null;
-      $('#read-source').textContent = 'Read it';
-    }
-  }
-  if (!reply && sample) { reply = sample.saved; origin = 'Saved answer for this sample. Live reading runs when the page is opened inside Claude.'; }
-  if (!reply) return setStatus('Live reading needs Claude: open this page inside Claude and allow it. Here, the three samples show a saved answer.');
-  showResult(checkExtraction(reply, text), origin);
-}
-
-function showResult(checked, origin) {
+function showSample(sample) {
+  if (!sample) return;
+  for (const button of $$('[data-sample]')) button.setAttribute('aria-pressed', String(button.dataset.sample === sample.id));
+  $('#sample-details').hidden = false;
+  $('#sample-title').textContent = sample.title;
+  const sourceLink = $('#sample-source');
+  sourceLink.href = safeUrl(sample.url);
+  sourceLink.textContent = 'Open the original source';
+  $('#sample-text').innerHTML = sample.text.split(/\n\n+/).map(paragraph => `<p>${escapeHtml(paragraph)}</p>`).join('');
+  const checked = checkExtraction(sample.saved, sample.text);
   const box = $('#reader-result');
   box.hidden = false;
-  if (checked.error) { result = null; setStatus(''); box.innerHTML = `<p class="result-error">${escapeHtml(checked.error)}</p>`; return; }
+  if (checked.error) {
+    $('#reader-status').textContent = 'This saved demonstration failed the quote check.';
+    box.innerHTML = `<p class="result-error">${escapeHtml(checked.error)}</p>`;
+    return;
+  }
   const { record, dropped } = checked;
-  result = { record, url: safeUrl($('#source-url').value.trim()) };
   const kept = 1 + Object.keys(LINKS).filter(key => record[key]).length + (record.hiring ? 1 : 0);
-  setStatus('');
-  box.innerHTML = `<p class="result-origin">${escapeHtml(origin)}</p>
+  $('#reader-status').textContent = 'Saved demonstration checked against its excerpt.';
+  box.innerHTML = `<p class="result-origin">Saved demonstration from the checked record; no model was called.</p>
     <h3>${escapeHtml(record.company)} <span>${escapeHtml(listed(record.cities))} · ${EVENTS[record.event]}</span></h3>
     ${record.summary ? `<p>${escapeHtml(record.summary)}</p>` : ''}
-    <p class="result-check"><strong>${kept} of ${kept + dropped.length} quotes found in your text, word for word.</strong>${dropped.length ? ' The rest were dropped.' : ''}</p>
+    <p class="result-check"><strong>${kept} of ${kept + dropped.length} quotes found in this saved excerpt, word for word.</strong>${dropped.length ? ' The rest were dropped.' : ''}</p>
     ${proofList(record)}
-    ${dropped.length ? `<ul class="dropped">${dropped.map(item => `<li><strong>${item.key === 'hiring' ? 'Hiring' : LINKS[item.key].label}: ${escapeHtml(item.label)}</strong> was dropped. This sentence is not in the text: ${escapeHtml(item.quote || 'no quote was given')}</li>`).join('')}</ul>` : ''}
-    <p class="result-actions"><button type="button" class="button" id="add-result">Add to the record</button> <span>Saved in this browser only.</span></p>`;
-  box.scrollIntoView({ block: 'nearest' });
-}
-
-function addResult() {
-  if (!result) return;
-  const today = new Date();
-  const addedOn = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  added = cleanAdded([{ ...result.record, url: result.url, addedOn }, ...added]);
-  save(ADDED_KEY, added);
-  renderAdded();
-  result = null;
-  $('#reader-result').hidden = true;
-  setStatus('Added. It is at the top of the record, marked as yours.');
-  const row = $('#added-list .entry');
-  row.open = true;
-  row.scrollIntoView({ block: 'center' });
-  $('summary', row).focus({ preventScroll: true });
+    ${dropped.length ? `<ul class="dropped">${dropped.map(item => `<li><strong>${item.key === 'hiring' ? 'Hiring' : LINKS[item.key].label}: ${escapeHtml(item.label)}</strong> was dropped. This sentence is not in the excerpt: ${escapeHtml(item.quote || 'no quote was given')}</li>`).join('')}</ul>` : ''}`;
 }
 
 // ---------- Cost sketch ----------
@@ -328,19 +247,8 @@ document.addEventListener('click', event => {
   if (data.names) showFiltered({ names: data.names });
   else if (data.player) showFiltered({ query: data.player });
   else if (data.team) { write('team', Number(data.team)); fillForm(); }
-  else if (data.sample) {
-    const sample = evidence.samples.find(item => item.id === data.sample);
-    $('#source-text').value = sample.text;
-    $('#source-url').value = sample.url;
-    $('#reader-result').hidden = true;
-    setStatus('Sample loaded. Now read it.');
-  } else if (data.remove) {
-    added = cleanAdded(added.filter(record => record.id !== data.remove));
-    save(ADDED_KEY, added);
-    renderAdded();
-  } else if (button.id === 'add-result') addResult();
+  else if (data.sample) showSample(evidence.samples.find(item => item.id === data.sample));
 });
-$('#read-source').addEventListener('click', readSource);
 $('#clear-filters').addEventListener('click', () => showFiltered({}));
 $('#show-all').addEventListener('click', () => { showAll = true; applyFilter(); });
 $('#reset').addEventListener('click', () => { plan = defaultState(); save(PLAN_KEY, plan); fillForm(); renderCost(); });
@@ -351,15 +259,13 @@ $('#print').addEventListener('click', () => window.print());
 buildFinding();
 buildRecord();
 buildCost();
-renderAdded();
 applyFilter();
 fillForm();
 renderCost();
-$('#samples').innerHTML = evidence.samples.map(sample => `<button type="button" class="chip pick" data-sample="${escapeHtml(sample.id)}">${escapeHtml(sample.label)}</button>`).join('');
+$('#samples').innerHTML = evidence.samples.map(sample => `<button type="button" class="chip pick" data-sample="${escapeHtml(sample.id)}" aria-pressed="false">${escapeHtml(sample.label)}</button>`).join('');
 $('#report').innerHTML = toHtml(buildReport(evidence));
 $('#show-all').textContent = `Show all ${records.length}`;
-for (const slot of $$('[data-fill]')) slot.textContent = { records: records.length, sources: new Set(records.map(record => record.source.url)).size, checked: checkedOn, max: MAX_SOURCE.toLocaleString('en-IN') }[slot.dataset.fill];
+for (const slot of $$('[data-fill]')) slot.textContent = { records: records.length, sources: new Set(records.map(record => record.source.url)).size, checked: checkedOn }[slot.dataset.fill];
 // Printing and plain downloads are refused inside Claude; there the page saves through Claude instead.
 $('#print').hidden = inClaude;
-ai.then(live => { $('#reader-mode').textContent = live ? 'Live: Claude reads whatever you paste.' : 'Claude is not connected here, so the three samples show a saved answer.'; });
 downloads.then(viaClaude => { $('#download').hidden = inClaude && !viaClaude; });

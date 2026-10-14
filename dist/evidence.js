@@ -1,5 +1,5 @@
 // Written by tools/check-sources.mjs from data/announcements.json. Do not edit by hand:
-// every quote here was copied from its source page by that tool on the checkedOn date.
+// Source-check date and per-record status are below; cached rebuilds do not claim a fresh live check.
 export const evidence = {
   "checkedOn": "2026-10-13",
   "listUrl": "https://flexiple.com/gcc/india",
@@ -906,7 +906,7 @@ export const evidence = {
       },
       "receipt": "The company, which opened its first tech centre, or global capability centre, in Bengaluru city last year, currently employs around 350 people in functions including data and artificial intelligence (AI) and is expected to grow to 500-550.",
       "check": "read",
-      "checkNote": "The site refuses automated checks, so this quote was read through a scraping service and is not re-checked by the tool.",
+      "checkNote": "The automated source checker cannot re-fetch this page. Its full article was read through the web reader on 14 Oct 2026; the previously recorded quote is retained and remains outside the automated check.",
       "hiring": {
         "claim": "About 350 now, 500 to 550 expected",
         "quote": "The company, which opened its first tech centre, or global capability centre, in Bengaluru city last year, currently employs around 350 people in functions including data and artificial intelligence (AI) and is expected to grow to 500-550."
@@ -1021,7 +1021,7 @@ export const evidence = {
         "Tamil Nadu"
       ],
       "event": "announced",
-      "publishedOn": null,
+      "publishedOn": "2025-04-29",
       "summary": "Is set to establish a Chennai centre with an investment of about ₹220 crore.",
       "source": {
         "title": "Cloud Giant Workday Invests ₹220 Crore in Chennai Global Capability Center",
@@ -1185,7 +1185,7 @@ export const evidence = {
     },
     {
       "id": "heineken-hyderabad-2026",
-      "label": "One that names nobody else",
+      "label": "One with no tracked relationship",
       "title": "HEINEKEN strengthens global capability footprint with official opening of business services centre in India",
       "url": "https://www.theheinekencompany.com/newsroom/heineken-strengthens-global-capability-footprint-with-official-opening-of-business-services-centre-in-india/",
       "text": "HEINEKEN today officially opened its HEINEKEN Business Services India (HBS India) Centre in Hyderabad, marking a significant milestone in the company's global transformation and productivity agenda under its EverGreen 2030 strategy.\n\nDesigned to HEINEKEN's global workplace standards, it reflects the company's commitment to collaboration, culture, innovation and talent development.\n\nThe Hyderabad Centre is a key contributor to the planned expansion of HEINEKEN Business Services, which is expected to grow to around 3,000 roles globally across all HBS locations by 2030.",

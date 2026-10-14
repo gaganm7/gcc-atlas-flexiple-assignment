@@ -1,12 +1,13 @@
 // The record as a document: built once as a list of [type, content] blocks,
 // then written out as Markdown (copy, download) or HTML (print).
-import { EVENTS, KINDS, LINKS, UNNAMED_SENTENCE, coverage, formatDate, players } from './model.js';
+import { EVENTS, KINDS, LINKS, coverage, formatDate, players } from './model.js';
 
 export const escapeHtml = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+// The record tracks three relationships only, so the finding never claims that other roles went unnamed.
 export function findingSentence(records) {
   const [first, ...rest] = coverage(records);
-  return `Of ${records.length} announcements, ${first.named} name ${first.one}, ${rest.map(row => `${row.named} name ${row.one}`).join(' and ')}. ${UNNAMED_SENTENCE}`;
+  return `Of ${records.length} announcements, ${first.named} name ${first.one}, ${rest.map(row => `${row.named} name ${row.one}`).join(' and ')}. These are the relationships the record tracks; a missing mention does not show that a service was unused.`;
 }
 
 export function buildReport(evidence) {
@@ -16,7 +17,7 @@ export function buildReport(evidence) {
     ['h1', 'Who helped set up India’s newest GCCs?'],
     ['p', `${records.length} announcements from ${sources} sources, last checked on ${formatDate(evidence.checkedOn)}. The sources are the ones cited on Flexiple’s list of new and upcoming GCCs in India (${evidence.listUrl}).`],
     ['lead', findingSentence(records)],
-    ['p', 'Named means only that the source says so. A source that names no recruiter does not show that none was used. This is not a rating of any firm.'],
+    ['p', 'Named means only that the source says so. This is not a rating of any firm.'],
     ['h2', 'Who is named'],
     ['table', {
       head: ['Named party', 'As', 'Announcements', 'Companies'],
@@ -35,9 +36,9 @@ export function buildReport(evidence) {
     }))],
     ['h2', 'How this was made'],
     ['list', [
-      'AI read each source and proposed the company, the city and anyone else named, each with one quoted sentence.',
+      'AI read each source and proposed the company, the city and any state government, setup partner or building named, each with one quoted sentence.',
       'A program then looked for every quoted sentence on the page itself. A quote that was not there word for word was thrown away.',
-      `${records.filter(record => record.check === 'matched').length} of ${records.length} entries were matched on the live page. ${records.filter(record => record.check !== 'matched').length} came from a site that blocks automated checks and was read once.`,
+      `${records.filter(record => record.check === 'matched').length} of ${records.length} entries were matched against their source pages, checked ${formatDate(evidence.checkedOn)}. ${records.filter(record => record.check !== 'matched').length} came from a site that blocks automated checks; it was read separately and is labelled.`,
       ...evidence.unreadable.map(item => `Left out: ${item.company}. ${item.reason}`)
     ]]
   ];

@@ -281,3 +281,11 @@ button.meter .meter-value { color: var(--ink); font-weight: 600; }
   .report .sources a { color: #163b25; font-weight: 600; overflow-wrap: anywhere; }
   .report .sources p { margin-top: 3pt; font-size: 10pt; }
 }
+
+/* Saved research examples: the excerpt, its source and the checked answer. */
+.sample { margin-bottom: 4px; padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--soft); }
+.sample h3 { font-size: 17px; line-height: 1.35; }
+.sample > p { margin-top: 6px; font-size: 14px; }
+.sample-text { margin-top: 10px; color: var(--ink); font-size: 14px; line-height: 1.55; }
+.sample-text p + p { margin-top: 8px; }
+.chip.pick[aria-pressed="true"] { border-color: var(--accent); background: var(--soft); }

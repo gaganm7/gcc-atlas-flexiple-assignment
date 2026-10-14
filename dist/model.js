@@ -29,10 +29,6 @@ export const LINKS = {
   partner: { label: 'Setup partner', one: 'a setup partner', help: 'An outside firm named as helping set up, build or run the centre.' },
   workplace: { label: 'Workplace', one: 'a building or landlord', help: 'A named building, business park or landlord.' }
 };
-// The rest of the chain. No source in the record names one as involved.
-export const UNNAMED = ['Recruiter', 'Law firm', 'Auditor', 'Payroll firm'];
-export const UNNAMED_SENTENCE = 'None names a recruiter, a law firm, an auditor or a payroll firm.';
-
 // How many records name each kind of party, most often first.
 export function coverage(records) {
   return Object.entries(LINKS)

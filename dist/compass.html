@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#125740">
-  <meta name="description" content="Who helped set up India's newest GCCs: the outside parties each announcement names, with the sentence that proves it.">
+  <meta name="description" content="Who helped set up India's newest GCCs: the governments, setup partners and buildings each announcement names, with the sentence that proves it.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='12' fill='%23125740'/%3E%3Cpath d='M14 34 34 14M18 14h16v16' stroke='white' stroke-width='3' fill='none'/%3E%3C/svg%3E">
   <!-- page:start -->
   <title>GCC Compass</title>
@@ -22,7 +22,7 @@
     </a>
     <nav aria-label="On this page">
       <a href="#record">The record</a>
-      <a href="#read">Read a source</a>
+      <a href="#read">How it was built</a>
       <a href="#method">Method</a>
     </nav>
   </header>
@@ -30,12 +30,12 @@
   <main id="main" tabindex="-1">
     <section class="hero">
       <h1>Who really helped set up<br><em>India’s newest GCCs?</em></h1>
-      <p class="lede">A company opening a GCC deals with advisers, landlords, recruiters, payroll firms, lawyers and state governments. We read the <span data-fill="sources"></span> sources behind Flexiple’s list of new centres and wrote down every outside party each one names, with the sentence that proves it.</p>
+      <p class="lede">A company opening a GCC deals with advisers, landlords, recruiters, payroll firms, lawyers and state governments. We read the <span data-fill="sources"></span> sources behind Flexiple’s list of new centres and recorded three kinds of outside party where they are named: a state government, a setup partner, and a building or landlord, each with the sentence that proves it.</p>
       <p class="gcc"><strong>GCC</strong> means Global Capability Centre: a company’s own team in another country.</p>
     </section>
 
     <section class="finding" aria-labelledby="finding-title">
-      <h2 id="finding-title">Most of the chain stays out of sight</h2>
+      <h2 id="finding-title">Announcements name few of the firms involved</h2>
       <p id="finding-lede" class="section-lede"></p>
       <div id="coverage" class="coverage"></div>
       <div id="players" class="players"></div>
@@ -43,20 +43,15 @@
 
     <section id="record" aria-labelledby="record-title">
       <h2 id="record-title" tabindex="-1">The record</h2>
-      <p class="section-lede"><span data-fill="records"></span> announcements. Open one to see who it names and the sentence it rests on. Every quote was copied from its source page and matched there on <span data-fill="checked"></span>.</p>
+      <p class="section-lede"><span data-fill="records"></span> announcements. Open one to see who it names and the sentence it rests on. Quotes were matched to saved copies of the source pages on <span data-fill="checked"></span>; the one source that blocks automated checks is marked.</p>
       <div class="filters">
         <label class="sr-only" for="filter-query">Search the record</label>
         <input id="filter-query" type="search" placeholder="Search a company, city or named party" autocomplete="off">
         <label class="sr-only" for="filter-city">City</label>
         <select id="filter-city"><option value="">Every city</option></select>
         <label class="sr-only" for="filter-names">Who it names</label>
-        <select id="filter-names"><option value="">Names anyone or no one</option></select>
+        <select id="filter-names"><option value="">Any relationship, or none</option></select>
         <span id="record-count" role="status"></span>
-      </div>
-      <div id="added" hidden>
-        <h3>Added by you</h3>
-        <div id="added-list"></div>
-        <h3>Checked record</h3>
       </div>
       <div id="record-list"></div>
       <button type="button" id="show-all" class="button ghost show-all"></button>
@@ -64,19 +59,16 @@
     </section>
 
     <section id="read" aria-labelledby="read-title">
-      <h2 id="read-title">Read a new source</h2>
-      <p class="section-lede">Paste an announcement. AI pulls out the company, the city and anyone else it names. Then a plain program looks for every quoted sentence in your text and drops any that is not there, word for word.</p>
+      <h2 id="read-title">How the record was built</h2>
+      <p class="section-lede">AI read each announcement and proposed the company, the city and the parties it names, each with one quoted sentence. A plain program then kept only the quotes found in the source word for word. These three saved examples show that step. No AI runs on this page.</p>
       <div class="reader">
-        <p class="reader-samples">Try one: <span id="samples" class="chips"></span></p>
-        <label class="field-label" for="source-text">The source text</label>
-        <textarea id="source-text" rows="7" placeholder="Paste the text of a press release or news report about a new centre in India"></textarea>
-        <label class="field-label" for="source-url">Link to the source <span>optional</span></label>
-        <input id="source-url" type="url" placeholder="https://" autocomplete="off">
-        <p class="reader-actions">
-          <button type="button" id="read-source" class="button">Read it</button>
-          <span id="reader-status" role="status"></span>
-        </p>
-        <p id="reader-mode" class="reader-mode"></p>
+        <p class="reader-samples">Open an example: <span id="samples" class="chips"></span></p>
+        <div id="sample-details" class="sample" hidden>
+          <h3 id="sample-title"></h3>
+          <p><a id="sample-source" href="#read" target="_blank" rel="noopener noreferrer"></a></p>
+          <div id="sample-text" class="sample-text"></div>
+        </div>
+        <p class="reader-actions"><span id="reader-status" role="status"></span></p>
         <div id="reader-result" class="result" hidden></div>
       </div>
     </section>
@@ -123,11 +115,11 @@
         </details>
         <details>
           <summary>How does a quote get in?</summary>
-          <p>AI reads the source and proposes the company, the city and anyone else named, each with one quoted sentence. A plain program then looks for every quoted sentence on the page itself. <strong>A quote that is not there word for word is thrown away.</strong> A person reviews what is left. The same check runs every time the record is rebuilt, so a page that changes or disappears is caught.</p>
+          <p>AI reads the source and proposes the company, the city and any state government, setup partner or building it names, each with one quoted sentence. A plain program then looks for every quoted sentence on the page itself. <strong>A quote that is not there word for word is thrown away.</strong> A person reviews what is left. The same check runs every time the record is rebuilt, so a page that changes or disappears is caught.</p>
         </details>
         <details>
           <summary>What does “named” mean?</summary>
-          <p>Only that the source says so. A press release that names no recruiter does not show that none was used. That gap is the finding: the public record shows a small part of who was involved, so a newcomer still has to ask around.</p>
+          <p>Only that the source says so. The record tracks three relationships: a state government, a setup partner, and a building or landlord. A missing mention does not show that a service was unused. That gap is the finding: the public record shows a small part of who was involved, so a newcomer still has to ask around.</p>
         </details>
         <details>
           <summary>What is this not?</summary>

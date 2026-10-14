@@ -186,7 +186,7 @@ function atlasReportText() {
   if (!shortlistedProviderIds.length) lines.push('No providers selected.');
   lines.push('', '## Provider source directory', '', 'This is an alphabetical evidence directory, not a quality recommendation or paid placement.');
   for (const provider of [...ATLAS_PROVIDERS].sort((a, b) => a.name.localeCompare(b.name))) lines.push(`- ${provider.name}: ${CATEGORY_NAMES[provider.category]}. ${provider.website}`, `  - ${provider.verification}. ${provider.coverageNote}`, ...provider.sources.map(source => `  - ${source.publisher}: ${source.claim} (${source.url})`));
-  lines.push('', '## Product limits', 'No live LLM is called by the Atlas engine. The separate source reader can use Claude inside its Artifact; outside it, only explicitly labelled saved sample answers work.', 'No consultation has been booked or sent. No live provider performance ranking, legal assessment, or incentive eligibility calculation is included.', 'Saved decisions stay in this browser.');
+  lines.push('', '## Product limits', 'No AI model runs in this prototype. AI tools helped research and build it; the source record shows three saved examples of that research step.', 'No consultation has been booked or sent. No live provider performance ranking, legal assessment, or incentive eligibility calculation is included.', 'Saved decisions stay in this browser.');
   return lines.join('\n');
 }
 function showAtlasReport() {
